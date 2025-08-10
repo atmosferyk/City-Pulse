@@ -1,3 +1,4 @@
+import { ReactNode } from "react";
 import { StyleSheet, Text } from "react-native";
 import HapticPressable from "./HapticPressable";
 
@@ -5,9 +6,15 @@ type CardProps = {
   ComponentName: string;
   index: number;
   onPress?: () => void;
+  children?: ReactNode;
 };
 
-export default function Card({ ComponentName, onPress }: CardProps) {
+export default function Card({
+  ComponentName,
+  onPress,
+  index,
+  children,
+}: CardProps) {
   return (
     <HapticPressable
       onPress={onPress}
@@ -21,7 +28,11 @@ export default function Card({ ComponentName, onPress }: CardProps) {
       accessibilityLabel={ComponentName}
     >
       <Text style={styles.cardTitle}>{ComponentName}</Text>
-      <Text style={styles.cardBody}>Placeholder content</Text>
+      {children ? (
+        children
+      ) : (
+        <Text style={styles.cardBody}>Placeholder content</Text>
+      )}
     </HapticPressable>
   );
 }

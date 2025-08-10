@@ -1,8 +1,11 @@
 import Card from "@/components/Card";
 import CurrencyStrip from "@/components/CurrencyStrip";
 import DropdownPortal, { Anchor } from "@/components/DropdownPortal";
+import WeatherCard from "@/components/WeatherCard";
 import { useCitySearch } from "@/hooks/useCitySearch";
 import { City, useCityStore } from "@/hooks/useCityStore";
+import { useFx } from "@/hooks/useFx";
+import { useRouter } from "expo-router";
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import type { View as RNView } from "react-native";
 import {
@@ -17,10 +20,11 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-
 const STRIP_HEIGHT = 56;
 
 export default function HomeScreen() {
+  const router = useRouter();
+
   const [inputValue, setInputValue] = useState("");
   const { results, loading } = useCitySearch(inputValue);
 
@@ -33,9 +37,11 @@ export default function HomeScreen() {
   const inputWrapperRef = useRef<View>(null);
 
   const measureAnchor = useCallback(() => {
-    inputWrapperRef.current?.measureInWindow?.((x: number, y: number, w: number, h: number) => {
-      setAnchor({ x, y, width: w, height: h });
-    });
+    inputWrapperRef.current?.measureInWindow?.(
+      (x: number, y: number, w: number, h: number) => {
+        setAnchor({ x, y, width: w, height: h });
+      }
+    );
   }, []);
 
   const handlePick = useCallback(
@@ -48,6 +54,14 @@ export default function HomeScreen() {
     [setCity]
   );
 
+  const {
+    data: fx,
+    loading: fxLoading,
+    error: fxError,
+    asOf: fxAsOf,
+    refresh: refreshFx,
+  } = useFx();
+
   const bottomPad = useMemo(
     () => STRIP_HEIGHT + Math.max(insets.bottom, 8) + 8,
     [insets.bottom]
@@ -57,7 +71,10 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.safe}>
       <View style={styles.root}>
         <ScrollView
-          contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPad }]}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: bottomPad },
+          ]}
           keyboardShouldPersistTaps="handled"
           onScrollBeginDrag={() => setShowDropdown(false)}
         >
@@ -88,7 +105,14 @@ export default function HomeScreen() {
 
           <View style={styles.cardsContainer}>
             <View style={styles.topRow}>
-              <Card ComponentName="Pogoda" index={0} />
+              <Card
+                ComponentName="Pogoda"
+                index={0}
+                onPress={() => router.push("/weather")}
+              >
+                <WeatherCard />
+              </Card>
+
               <Card ComponentName="Jakość Powietrza" index={1} />
             </View>
             <Card ComponentName="Wiadomości" index={2} />
@@ -96,11 +120,19 @@ export default function HomeScreen() {
         </ScrollView>
 
         <DropdownPortal
-          visible={showDropdown && inputValue.trim().length >= 2 && !loading && results.length > 0}
+          visible={
+            showDropdown &&
+            inputValue.trim().length >= 2 &&
+            !loading &&
+            results.length > 0
+          }
           anchor={anchor}
           data={results}
           keyExtractor={(item, i) => item.name + item.latitude + i}
-          renderLabel={(item) => ({ title: item.label, meta: `(${item.countryCode})` })}
+          renderLabel={(item) => ({
+            title: item.label,
+            meta: `(${item.countryCode})`,
+          })}
           onSelect={(item) => {
             handlePick(item);
           }}
@@ -117,11 +149,7 @@ export default function HomeScreen() {
           ]}
         >
           <CurrencyStrip
-            rates={[
-              { pair: "USD/PLN", value: 4.15 },
-              { pair: "EUR/PLN", value: 4.49 },
-              { pair: "GBP/PLN", value: 5.22 },
-            ]}
+            rates={(fx ?? []).map((r) => ({ pair: r.pair, value: r.value }))}
             onPress={() => console.log("Go to /pln")}
           />
         </View>
@@ -152,7 +180,9 @@ function Header({
   return (
     <View style={styles.header}>
       <View style={styles.rowCenter}>
-        <Text style={styles.city}>{cityTitle || "Sprawdź jak jest u ciebie!"}</Text>
+        <Text style={styles.city}>
+          {cityTitle || "Sprawdź jak jest u ciebie!"}
+        </Text>
         <Text style={styles.meta}>Ostatnia aktualizacja: {updateTime}</Text>
       </View>
 
@@ -178,8 +208,7 @@ function Header({
             autoCapitalize="none"
             clearButtonMode="while-editing"
             accessibilityLabel="Wyszukaj miasto"
-            onSubmitEditing={() => {
-            }}
+            onSubmitEditing={() => {}}
           />
         </View>
       </View>
