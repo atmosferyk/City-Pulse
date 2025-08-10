@@ -1,6 +1,10 @@
 import Card from "@/components/Card";
 import CurrencyStrip from "@/components/CurrencyStrip";
-import { useCallback, useMemo, useState } from "react";
+import DropdownPortal, { Anchor } from "@/components/DropdownPortal";
+import { useCitySearch } from "@/hooks/useCitySearch";
+import { City, useCityStore } from "@/hooks/useCityStore";
+import React, { useCallback, useMemo, useRef, useState } from "react";
+import type { View as RNView } from "react-native";
 import {
   Keyboard,
   Platform,
@@ -13,24 +17,39 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-const STRIP_HEIGHT = 56; // keep footer height predictable for padding
+
+const STRIP_HEIGHT = 56;
 
 export default function HomeScreen() {
   const [inputValue, setInputValue] = useState("");
-  const [cityName, setCityName] = useState<string | null>(null);
-  const insets = useSafeAreaInsets();
+  const { results, loading } = useCitySearch(inputValue);
 
-  const handleSubmit = useCallback(() => {
-    const trimmed = inputValue.trim();
-    if (trimmed) {
-      setCityName(trimmed);
+  const insets = useSafeAreaInsets();
+  const city = useCityStore((s) => s.city);
+  const setCity = useCityStore((s) => s.setCity);
+
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [anchor, setAnchor] = useState<Anchor | null>(null);
+  const inputWrapperRef = useRef<View>(null);
+
+  const measureAnchor = useCallback(() => {
+    inputWrapperRef.current?.measureInWindow?.((x: number, y: number, w: number, h: number) => {
+      setAnchor({ x, y, width: w, height: h });
+    });
+  }, []);
+
+  const handlePick = useCallback(
+    (c: City) => {
+      setCity(c);
       setInputValue("");
+      setShowDropdown(false);
       Keyboard.dismiss();
-    }
-  }, [inputValue]);
+    },
+    [setCity]
+  );
 
   const bottomPad = useMemo(
-    () => STRIP_HEIGHT + Math.max(insets.bottom, 8) + 8, // room for shadow + safe area
+    () => STRIP_HEIGHT + Math.max(insets.bottom, 8) + 8,
     [insets.bottom]
   );
 
@@ -38,18 +57,31 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.safe}>
       <View style={styles.root}>
         <ScrollView
-          contentContainerStyle={[
-            styles.scrollContent,
-            { paddingBottom: bottomPad },
-          ]}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPad }]}
           keyboardShouldPersistTaps="handled"
+          onScrollBeginDrag={() => setShowDropdown(false)}
         >
           <Header
-            cityName={cityName}
+            cityTitle={city?.name ?? "Sprawdź co u ciebie"}
             updateTime="10:30"
             inputValue={inputValue}
-            onInputValue={setInputValue}
-            onSubmit={handleSubmit}
+            onInputValue={(t) => {
+              setInputValue(t);
+              if (t.trim().length >= 2) {
+                measureAnchor();
+                setShowDropdown(true);
+              } else {
+                setShowDropdown(false);
+              }
+            }}
+            onFocusInput={() => {
+              if (inputValue.trim().length >= 2) {
+                measureAnchor();
+                setShowDropdown(true);
+              }
+            }}
+            measureAnchor={measureAnchor}
+            inputWrapperRef={inputWrapperRef}
           />
 
           <Text style={styles.sectionTitle}>Today</Text>
@@ -59,12 +91,22 @@ export default function HomeScreen() {
               <Card ComponentName="Pogoda" index={0} />
               <Card ComponentName="Jakość Powietrza" index={1} />
             </View>
-
             <Card ComponentName="Wiadomości" index={2} />
           </View>
         </ScrollView>
 
-        {/* Fixed bottom currency strip (full width, safe-area aware) */}
+        <DropdownPortal
+          visible={showDropdown && inputValue.trim().length >= 2 && !loading && results.length > 0}
+          anchor={anchor}
+          data={results}
+          keyExtractor={(item, i) => item.name + item.latitude + i}
+          renderLabel={(item) => ({ title: item.label, meta: `(${item.countryCode})` })}
+          onSelect={(item) => {
+            handlePick(item);
+          }}
+          onRequestClose={() => setShowDropdown(false)}
+        />
+
         <View
           style={[
             styles.currencyStripContainer,
@@ -89,42 +131,57 @@ export default function HomeScreen() {
 }
 
 type HeaderProps = {
-  cityName: string | null;
+  cityTitle: string;
   updateTime?: string;
-  inputValue?: string;
+  inputValue: string;
   onInputValue: (name: string) => void;
-  onSubmit: () => void;
+  onFocusInput: () => void;
+  measureAnchor: () => void;
+  inputWrapperRef: React.MutableRefObject<RNView | null>;
 };
 
 function Header({
-  cityName,
+  cityTitle,
   updateTime,
   inputValue,
   onInputValue,
-  onSubmit,
+  onFocusInput,
+  measureAnchor,
+  inputWrapperRef,
 }: HeaderProps) {
   return (
     <View style={styles.header}>
       <View style={styles.rowCenter}>
-        <Text style={styles.city}>{cityName || "Sprawdź jak jest u ciebie!"}</Text>
+        <Text style={styles.city}>{cityTitle || "Sprawdź jak jest u ciebie!"}</Text>
         <Text style={styles.meta}>Last update {updateTime}</Text>
       </View>
 
       <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="Wpisz miasto i naciśnij Enter"
-          placeholderTextColor="#6B7280"
-          value={inputValue}
-          onChangeText={onInputValue}
-          onSubmitEditing={onSubmit}
-          returnKeyType="search"
-          textAlign="center"
-          autoCorrect={false}
-          autoCapitalize="none"
-          clearButtonMode="while-editing"
-          accessibilityLabel="Wyszukaj miasto"
-        />
+        <View
+          ref={inputWrapperRef}
+          style={styles.inputWrapper}
+          onLayout={measureAnchor}
+        >
+          <TextInput
+            style={styles.input}
+            placeholder="Wpisz miasto (min 2 litery)…"
+            placeholderTextColor="#6B7280"
+            value={inputValue}
+            onChangeText={onInputValue}
+            onFocus={() => {
+              onFocusInput();
+              measureAnchor();
+            }}
+            returnKeyType="search"
+            textAlign="center"
+            autoCorrect={false}
+            autoCapitalize="none"
+            clearButtonMode="while-editing"
+            accessibilityLabel="Wyszukaj miasto"
+            onSubmitEditing={() => {
+            }}
+          />
+        </View>
       </View>
     </View>
   );
@@ -138,7 +195,13 @@ const styles = StyleSheet.create({
     paddingTop: Platform.select({ ios: 8, android: 8 }),
     gap: 16,
   },
-  header: { alignItems: "center", gap: 16, marginBottom: 8, marginTop: 50 },
+  header: {
+    alignItems: "center",
+    gap: 16,
+    marginBottom: 8,
+    marginTop: 50,
+    position: "relative",
+  },
   rowCenter: { alignItems: "center", gap: 8 },
   city: {
     fontSize: 30,
@@ -147,18 +210,28 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   meta: { color: "#aaa", fontSize: 13 },
-  inputContainer: { alignItems: "center", width: "100%" },
+  inputContainer: {
+    alignItems: "center",
+    width: "100%",
+  },
+  inputWrapper: {
+    width: "100%",
+    maxWidth: 520,
+    alignSelf: "center",
+    position: "relative",
+  },
   input: {
     paddingVertical: 14,
     paddingHorizontal: 18,
-    borderRadius: 28,
+    borderRadius: 999,
     backgroundColor: "#1a1a1a",
     color: "white",
-    width: "80%",
+    width: "100%",
     fontSize: 16,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: "#232329",
-    textAlign: 'center'
+    textAlign: "center",
+    outlineStyle: "none" as any, // web polish
   },
   sectionTitle: {
     color: "#D1D5DB",
@@ -179,5 +252,3 @@ const styles = StyleSheet.create({
     borderTopColor: "#232329",
   },
 });
-
-//test

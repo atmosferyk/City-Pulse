@@ -1,6 +1,7 @@
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import HapticPressable from "./HapticPressable";
 
+
 type CurrencyStripProps = {
   rates: { pair: string; value: number }[];
   onPress?: () => void;
