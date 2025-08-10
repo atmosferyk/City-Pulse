@@ -84,7 +84,7 @@ export default function HomeScreen() {
             inputWrapperRef={inputWrapperRef}
           />
 
-          <Text style={styles.sectionTitle}>Today</Text>
+          <Text style={styles.sectionTitle}>Dzisiaj</Text>
 
           <View style={styles.cardsContainer}>
             <View style={styles.topRow}>
@@ -153,7 +153,7 @@ function Header({
     <View style={styles.header}>
       <View style={styles.rowCenter}>
         <Text style={styles.city}>{cityTitle || "Sprawdź jak jest u ciebie!"}</Text>
-        <Text style={styles.meta}>Last update {updateTime}</Text>
+        <Text style={styles.meta}>Ostatnia aktualizacja: {updateTime}</Text>
       </View>
 
       <View style={styles.inputContainer}>
@@ -164,7 +164,7 @@ function Header({
         >
           <TextInput
             style={styles.input}
-            placeholder="Wpisz miasto (min 2 litery)…"
+            placeholder="Wpisz miasto…"
             placeholderTextColor="#6B7280"
             value={inputValue}
             onChangeText={onInputValue}
