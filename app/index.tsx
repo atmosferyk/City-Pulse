@@ -158,6 +158,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: "#232329",
+    textAlign: 'center'
   },
   sectionTitle: {
     color: "#D1D5DB",
@@ -172,7 +173,6 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: "#1a1a1a",
     paddingHorizontal: 16,
     paddingBottom: 8,
     borderTopWidth: StyleSheet.hairlineWidth,
