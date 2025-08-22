@@ -1,6 +1,8 @@
+import AirCardContent from "@/components/AirCard";
 import Card from "@/components/Card";
 import CurrencyStrip from "@/components/CurrencyStrip";
 import DropdownPortal, { Anchor } from "@/components/DropdownPortal";
+import NewsCardContent from "@/components/NewsCard";
 import WeatherCard from "@/components/WeatherCard";
 import { useCitySearch } from "@/hooks/useCitySearch";
 import { City, useCityStore } from "@/hooks/useCityStore";
@@ -113,9 +115,21 @@ export default function HomeScreen() {
                 <WeatherCard />
               </Card>
 
-              <Card ComponentName="Jakość Powietrza" index={1} />
+              <Card
+                ComponentName="Jakość Powietrza"
+                index={1}
+                onPress={() => router.push("/air-quality")}
+              >
+                <AirCardContent />
+              </Card>
             </View>
-            <Card ComponentName="Wiadomości" index={2} />
+            <Card
+              ComponentName="Wiadomości"
+              index={2}
+              onPress={() => router.push("/news")}
+            >
+              <NewsCardContent />
+            </Card>
           </View>
         </ScrollView>
 

@@ -1,4 +1,3 @@
-// hooks/useCityStore.tsx (v5)
 import { useStore } from "zustand";
 import { createStore } from "zustand/vanilla";
 
@@ -28,3 +27,4 @@ export const cityStore = createStore<CityState>()((set) => ({
 export function useCityStore<T>(selector: (s: CityState) => T): T {
   return useStore(cityStore, selector);
 }
+
