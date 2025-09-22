@@ -108,7 +108,7 @@ export default function HomeScreen() {
           <View style={styles.cardsContainer}>
             <View style={styles.topRow}>
               <Card
-                ComponentName="Pogoda"
+                ComponentName={city?.name?.toLowerCase() === "gdynia" ? "Pogoda u Klarusi" : "Pogoda"}
                 index={0}
                 onPress={() => router.push("/weather")}
               >
